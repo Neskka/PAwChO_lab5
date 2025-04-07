@@ -1,19 +1,17 @@
-FROM golang:1.21-alpine AS builder
+# syntax=docker/dockerfile:1.4
 
-WORKDIR /app
-COPY . .
+# Etap 1: Klonowanie repozytorium z GitHuba
+FROM alpine AS gitclone
 
-ARG VERSION="1.0.0"
+RUN apk add --no-cache git openssh
 
-RUN go mod init myapp && go mod tidy && \
-    go build -ldflags "-X main.version=$VERSION" -o myapp
+# Konfiguracja SSH na Windowsie
+RUN mkdir -p /root/.ssh && chmod 0700 /root/.ssh
+RUN touch /root/.ssh/known_hosts && ssh-keyscan github.com >> /root/.ssh/known_hosts
 
-FROM alpine:latest AS runtime
+# Skorzystaj z przekazanego klucza SSH i sklonuj repo
+RUN --mount=type=ssh git clone git@github.com:Neskka/PAwChO_lab5.git /app
 
-WORKDIR /root/
-COPY --from=builder /app/myapp .
-EXPOSE 8080
-
-HEALTHCHECK --interval=30s --timeout=10s --retries=3 CMD wget -qO- http://localhost:8080 || exit 1
-
-CMD ["./myapp"]
+# Etap 2: Serwer Nginx z aplikacją
+FROM nginx:alpine
+COPY --from=gitclone /app/etap2/dist /usr/share/nginx/html
