@@ -11,6 +11,21 @@ RUN touch /root/.ssh/known_hosts && ssh-keyscan github.com >> /root/.ssh/known_h
 
 RUN --mount=type=ssh git clone git@github.com:Neskka/PAwChO_lab5.git /app
 
+FROM node:alpine AS nodeapp
+
+WORKDIR /app
+COPY --from=gitclone /app/ /app
+WORKDIR /app/etap2
+
+RUN npm install
+
 # Etap 2: Serwer Nginx z aplikacją
 FROM nginx:alpine
-COPY --from=gitclone /app/etap2 /usr/share/nginx/html
+
+COPY nginx.conf /etc/nginx/nginx.conf
+
+EXPOSE 80
+
+COPY --from=nodeapp /app/etap2 /usr/share/nginx/html
+
+CMD ["nginx", "-g", "daemon off;"]
